@@ -152,7 +152,7 @@
         <p class="subtitle">
             <strong>Handwriting to Text</strong> by AiTricker<br>
             Package: com.handwritingtotext.aitricker<br>
-            Effective Date: June 26, 2026 &nbsp;|&nbsp; Last Updated: June 26, 2026
+            Effective Date: June 26, 2026 &nbsp;|&nbsp; Last Updated: June 30, 2026
         </p>
 
         <h2>1. Introduction</h2>
@@ -170,22 +170,28 @@
 
         <h3>2.1 Anonymous Device Identifier</h3>
         <p>
-            When you first open the App, a unique anonymous identifier is generated using
-            Firebase Authentication (anonymous sign-in). This identifier is <strong>not linked
-            to your name, email, phone number, or any personal account</strong>. It is used
-            solely for managing your scan quota and verifying purchases.
+            When you first open the App, a unique anonymous identifier is derived from your
+            device's <strong>Android ID</strong> (a system-level identifier unique to each
+            device). This identifier is cryptographically hashed before use and is
+            <strong>not linked to your name, email, phone number, or any personal
+            account</strong>. It is used solely for managing your scan quota, verifying
+            purchases, and detecting refund abuse. Additionally, Firebase Authentication
+            (anonymous sign-in) is used to support Firebase App Check verification.
         </p>
 
         <h3>2.2 Camera Images (Temporary Processing Only)</h3>
         <p>
             When you scan handwritten text, the captured or gallery-selected image is compressed
-            and sent to our server <strong>only</strong> for text recognition (OCR) processing.
+            and sent to our server for text recognition (OCR) processing. The image is processed
+            using <strong>Google Gemini AI</strong> (via Google Cloud Vertex AI) to extract
+            handwritten text.
         </p>
         <div class="highlight">
             <strong>Important:</strong> Images are processed in real-time and are
-            <strong>not stored on our servers</strong>. Once the recognized text is returned to
-            your device, the image is immediately discarded from our server. We do not retain,
-            review, or use your images for any other purpose.
+            <strong>not stored on our servers or by Google</strong>. Once the recognized text
+            is returned to your device, the image is immediately discarded. We do not retain,
+            review, or use your images for any other purpose. Google Gemini processes images
+            in memory only and does not use them for model training.
         </div>
 
         <h3>2.3 Language Preference</h3>
@@ -198,8 +204,10 @@
         <h3>2.4 Purchase Verification</h3>
         <p>
             If you upgrade to Premium or Pro, your Google Play purchase token is sent to our
-            server to verify the purchase. We verify the token with Google and store your
-            upgraded tier status (linked to your anonymous device ID). We <strong>do not</strong>
+            server to verify the purchase with the Google Play Developer API. We store the
+            <strong>purchase token and your upgraded tier status</strong> (linked to your
+            anonymous device ID) on our server. The purchase token is retained to verify
+            ongoing purchase validity and detect refunds. We <strong>do not</strong>
             receive or store your payment details (credit card, billing address, etc.) — all
             payment processing is handled by Google Play.
         </p>
@@ -209,6 +217,15 @@
             We track scan counts, batch scan usage, and PDF export counts associated with
             your anonymous device ID to enforce free-tier limits. No personal information
             is linked to these counters.
+        </p>
+
+        <h3>2.6 IP Address (Security Only)</h3>
+        <p>
+            Your IP address may be temporarily logged by our server for <strong>security and
+            abuse prevention purposes only</strong> — such as detecting rate-limit abuse,
+            fraudulent purchase attempts, or unauthorized API access. IP addresses are stored
+            in our abuse log and are <strong>not</strong> used for tracking, analytics,
+            advertising, or any purpose beyond security.
         </p>
 
         <h2>3. Information Stored Only on Your Device</h2>
@@ -222,6 +239,10 @@
             <li>App settings — default language, crop toggle, auto-enhance toggle, AI insights toggle</li>
             <li>Translated text (ML Kit Translation runs entirely on-device)</li>
             <li>PDF files you export (stored in app's cache directory)</li>
+            <li>Backup files — you can export all scans and folders as a JSON file to your
+                device or cloud storage (e.g., Google Drive) using the Backup &amp; Restore
+                feature. Backup files are created locally and <strong>never sent to our
+                servers</strong>. You control where the file is saved and shared.</li>
         </ul>
         <div class="highlight">
             We have <strong>no access</strong> to any of your locally stored data. You can delete
@@ -244,12 +265,12 @@
             <tr><th>Data</th><th>Purpose</th><th>Stored on Server?</th></tr>
             <tr>
                 <td>Anonymous Device ID</td>
-                <td>Scan quota management, purchase verification, tier tracking</td>
-                <td>Yes (anonymous only)</td>
+                <td>Scan quota management, purchase verification, tier tracking, abuse prevention</td>
+                <td>Yes (anonymous, derived from Android ID)</td>
             </tr>
             <tr>
                 <td>Camera/Gallery Image</td>
-                <td>OCR text recognition — processed and immediately discarded</td>
+                <td>OCR text recognition via Google Gemini AI — processed and immediately discarded</td>
                 <td>No — discarded after processing</td>
             </tr>
             <tr>
@@ -259,13 +280,18 @@
             </tr>
             <tr>
                 <td>Purchase Token</td>
-                <td>Verifying in-app purchase with Google Play</td>
-                <td>No — verified and discarded</td>
+                <td>Verifying in-app purchase with Google Play, detecting refunds</td>
+                <td>Yes — stored for ongoing purchase validation</td>
             </tr>
             <tr>
                 <td>Usage Counters</td>
                 <td>Enforcing free-tier limits (5 scans, PDF limits, batch limits)</td>
                 <td>Yes (linked to anonymous ID)</td>
+            </tr>
+            <tr>
+                <td>IP Address</td>
+                <td>Abuse prevention and security logging only</td>
+                <td>Yes — in abuse log only, not for tracking</td>
             </tr>
         </table>
 
@@ -273,22 +299,34 @@
 
         <h3>6.1 Firebase (Google)</h3>
         <ul>
-            <li><strong>Firebase Authentication</strong> — Anonymous sign-in only. Generates a
-                unique device ID without collecting personal information.
+            <li><strong>Firebase Authentication</strong> — Anonymous sign-in only. Used to support
+                App Check verification. No personal information is collected.
                 <a href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener">Firebase Privacy</a>.</li>
+            <li><strong>Cloud Firestore</strong> — Stores anonymous device data (tier, usage
+                counters, purchase tokens) on Google Cloud servers.</li>
             <li><strong>Firebase App Check (Play Integrity)</strong> — Verifies that API requests
                 come from the genuine App, preventing unauthorized access to our server.
                 Device attestation data is processed by Google.</li>
         </ul>
 
-        <h3>6.2 Google Play Billing</h3>
+        <h3>6.2 Google Gemini AI (Vertex AI)</h3>
+        <p>
+            Handwriting images are processed using <strong>Google Gemini 2.5 Flash-Lite</strong>
+            via Google Cloud Vertex AI for text recognition (OCR). Images are sent to Google's
+            AI model in real-time, processed in memory, and <strong>not stored or used for
+            model training</strong>. Processing occurs on Google Cloud servers (asia-south1 region).
+            See <a href="https://cloud.google.com/vertex-ai/docs/generative-ai/data-governance"
+            target="_blank" rel="noopener">Vertex AI Data Governance</a>.
+        </p>
+
+        <h3>6.3 Google Play Billing</h3>
         <p>
             In-app purchases (Premium and Pro plans) are processed entirely by Google Play.
             We receive only a purchase token for verification. See
             <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google Privacy Policy</a>.
         </p>
 
-        <h3>6.3 Google ML Kit (On-Device)</h3>
+        <h3>6.4 Google ML Kit (On-Device)</h3>
         <ul>
             <li><strong>ML Kit Translation</strong> — Translates scanned text between 20+ languages.
                 Language models are downloaded to your device and
@@ -412,7 +450,7 @@
         <p class="subtitle">
             <strong>Handwriting to Text</strong> by AiTricker<br>
             Package: com.handwritingtotext.aitricker<br>
-            Effective Date: June 26, 2026 &nbsp;|&nbsp; Last Updated: June 26, 2026
+            Effective Date: June 26, 2026 &nbsp;|&nbsp; Last Updated: June 30, 2026
         </p>
 
         <h2>1. Acceptance of Terms</h2>
@@ -555,7 +593,7 @@
         <p class="subtitle">
             <strong>Handwriting to Text</strong> by AiTricker<br>
             Package: com.handwritingtotext.aitricker<br>
-            Effective Date: June 26, 2026 &nbsp;|&nbsp; Last Updated: June 26, 2026
+            Effective Date: June 26, 2026 &nbsp;|&nbsp; Last Updated: June 30, 2026
         </p>
 
         <h2>1. Overview</h2>
